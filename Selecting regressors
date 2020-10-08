@@ -1,0 +1,104 @@
+
+# Logit with CV
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score 
+from sklearn.model_selection import train_test_split
+import statsmodels.api as sm     # To add vector of 1 in matrix
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+import numpy as np
+from sklearn.neighbors import KNeighborsClassifier
+import seaborn as sn
+import matplotlib.pyplot as plt
+
+# Removing nans
+dataframebackup=dataframe
+dataframe=dataframe.dropna()
+
+# Split sample in test/train
+dataframe_train,dataframe_test= train_test_split(dataframe, random_state=101, test_size=0.3)
+
+# Explanatory variables
+x_var=dataframe_train.columns.tolist()
+x_var.remove('Descripcion')
+x_var.remove('Descripcion_filtro')
+x_var.remove('genero')
+x_var.remove('genero1')
+x_var
+
+# Test and train 
+y_train = dataframe_train[['genero1']]
+y_test =dataframe_test[['genero1']]
+x_train = dataframe_train[x_var]
+x_train['constant']=1
+x_test= dataframe_test[x_var] 
+x_test['constant']=1
+
+
+# Checking data
+y_test['genero1'].sum()
+y_train['genero1'].sum()
+y_test['genero1'].sum()/len(y_test) # Women proportion in test 
+y_train['genero1'].sum()/len(y_train) # Women proportion in train
+
+
+# LOGIT
+ 
+logit_model=sm.Logit(y_train.astype(float),x_train.astype(float))
+result=logit_model.fit(method='bfgs')
+print(result.summary2())
+print(result.summary2().as_latex())
+
+y_new_logit = result.predict(x_test.astype(float))
+
+# Rounding predictions
+y_new_logit=np.where(y_new_logit>0.5, 1, y_new_logit)
+y_new_logit=np.where(y_new_logit<=0.5, 0, y_new_logit)
+
+# CONFUSION MATRIX 
+# Rows = true values, columns= predicted values
+confusion_matrix_logit = confusion_matrix(y_test.astype(float),y_new_logit)
+print('Confusion Matrix :')
+print(confusion_matrix_logit) 
+# Thus in binary classification, the count of true negatives is C_0,0 , 
+# false negatives is C_1,0, true positives is C_1,1 and false positives is C_0,1
+
+
+
+# LASSO with CV
+
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import GridSearchCV
+
+lasso = Lasso()
+
+# Choosing lambda (penalization)
+parameters = {'alpha': [0.0001,0.001,0.01, 0.5,1,5, 10, 50,100,1000]}
+dataframe
+# Drop columns that are not proportion
+# dataframe2=dataframe.drop([col for col in dataframe.columns if 'prop' not in col],axis=1,inplace=True)
+
+lasso_regressor = GridSearchCV(lasso, parameters, scoring='neg_mean_squared_error', cv = 5)
+
+# Explanataroy variables
+Xs = dataframe.drop(['genero1','Descripcion','Descripcion_filtro','genero'], axis=1)
+
+# Choose to work tiwh proportions or absolute number of words
+# Xs.drop([col for col in Xs.columns if 'prop' not in col],axis=1,inplace=True) # Dropping non-proportion columns
+Xs.drop([col for col in Xs.columns if 'prop' in col],axis=1,inplace=True) # Dropping proportion columns
+
+y = dataframe['genero1'].values.reshape(-1,1)
+
+lasso_regressor.fit(Xs, y)
+lasso_regressor.best_params_
+lasso_regressor.best_score_
+
+# Using the "best model"
+from sklearn import linear_model
+clf = linear_model.Lasso(alpha=0.001)
+clf.fit(Xs,y)
+
+# Looking at coefficients not dropped
+coeficientes=pd.DataFrame(Xs.columns.tolist() )
+coeficientes['coef']=clf.coef_
