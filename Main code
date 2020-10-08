@@ -1,0 +1,82 @@
+
+# Import packages
+import os.path 
+import pandas as pd
+from nltk.probability import FreqDist
+from nltk.corpus import stopwords
+import nltk
+nltk.download('punkt')
+nltk.download('stopwords')
+
+# Download stopwords
+stop_words = set(stopwords.words('spanish')) 
+
+# Set path 
+path = 'J:/articulos/articulos/anuncios y género'
+os.chdir(path)
+
+
+# Load dataframe
+df = pd.read_excel("basecompleta.xlsx")
+df2=df
+
+# Select text from observations
+description=df2
+description=description[['Descripcion']]
+
+# Using a subset: descriptionsubset=description.head(100) # Use first n observations
+descriptionsubset=description
+
+# Loop to get filtered text
+removewords=[',','.',':','-','(',')','!','/'] # Words to be removed 
+total_text=[]
+for a in range(len(descriptionsubset)):
+    texto=description.loc[a,'Descripcion']
+    try:
+        word_tokens=nltk.word_tokenize(texto)
+        filtered_sentence=[w for w in word_tokens if not w in stop_words] # Removing stopwrods
+        filtered_sentence=[x.lower() for x in filtered_sentence] # lowercase
+        for r in removewords:
+            while r in filtered_sentence: filtered_sentence.remove(r)
+        str1 = ' '.join(filtered_sentence) # Convert list to text
+        descriptionsubset.loc[a,'Descripcion_filtro']=str1 # converting to string
+        total_text=total_text+filtered_sentence 
+    except:
+        print('Error found in row',a)
+        descriptionsubset.loc[a,'Descripcion_filtro']='nan'
+
+
+# Loop to get regressors based on most common words
+        
+fdist = FreqDist(total_text) # frequency words frequency
+mostcommon= 100 # n most common words that will be used 
+fdist_mostcommon= fdist.most_common(mostcommon)
+fdist_mostcommon
+dataframe=descriptionsubset
+
+for i in range(len(fdist_mostcommon)):
+    faltantes=100-i
+    print('falta',faltantes)
+    z1=fdist_mostcommon[i]
+    z1=z1[0]
+    columnname=z1
+    dataframe[z1]='nan' # Create new columns
+    for n in range(len(dataframe)):
+        dataframe.loc[n,z1]=dataframe.loc[n,'Descripcion_filtro'].count(z1)
+        z2=z1+' prop' # proportion
+        res = len(dataframe.loc[n,'Descripcion_filtro'].split()) # Total words from description
+        dataframe.loc[n,z2]=(dataframe.loc[n,'Descripcion_filtro'].count(z1))/res # Proportion of words
+
+# Saving results
+dataframe.to_csv('wordsasregressors.csv') 
+        
+# Organizing dataframe to predict 
+dataframe['genero']=df2['Género al cual se orienta']
+dataframe['genero1']=df2['Género al cual se orienta']
+
+# Making dummies
+dataframe.genero1[dataframe.genero == 'F'] = 1
+dataframe.genero1[dataframe.genero == 'M' ] = 0
+dataframe.genero1[dataframe.genero == 'I - Genérico'] = 0
+dataframe.genero1[dataframe.genero == 'I'] = 0
+dataframe.genero1[dataframe.genero == 'nan'] = 'nan'
