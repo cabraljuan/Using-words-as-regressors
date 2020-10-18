@@ -24,7 +24,9 @@ df2=df
 description=df2
 description=description[['Descripcion']]
 
-# Using a subset: descriptionsubset=description.head(100) # Use first n observations
+# Using a subset: descriptionsubset=description.head(100) 
+# Use first n observations
+
 descriptionsubset=description
 
 # Loop to get filtered text
@@ -34,12 +36,15 @@ for a in range(len(descriptionsubset)):
     texto=description.loc[a,'Descripcion']
     try:
         word_tokens=nltk.word_tokenize(texto)
-        filtered_sentence=[w for w in word_tokens if not w in stop_words] # Removing stopwrods
-        filtered_sentence=[x.lower() for x in filtered_sentence] # lowercase
+         # Removing stopwrods
+        filtered_sentence=[w for w in word_tokens if not w in stop_words]
+        # lowercase
+        filtered_sentence=[x.lower() for x in filtered_sentence] 
         for r in removewords:
             while r in filtered_sentence: filtered_sentence.remove(r)
         str1 = ' '.join(filtered_sentence) # Convert list to text
-        descriptionsubset.loc[a,'Descripcion_filtro']=str1 # converting to string
+        descriptionsubset.loc[a,'Descripcion_filtro']=str1 
+        # converting to string
         total_text=total_text+filtered_sentence 
     except:
         print('Error found in row',a)
@@ -64,8 +69,10 @@ for i in range(len(fdist_mostcommon)):
     for n in range(len(dataframe)):
         dataframe.loc[n,z1]=dataframe.loc[n,'Descripcion_filtro'].count(z1)
         z2=z1+' prop' # proportion
-        res = len(dataframe.loc[n,'Descripcion_filtro'].split()) # Total words from description
-        dataframe.loc[n,z2]=(dataframe.loc[n,'Descripcion_filtro'].count(z1))/res # Proportion of words
+        # Total words from description
+        res = len(dataframe.loc[n,'Descripcion_filtro'].split()) 
+        # Proportion of words
+        dataframe.loc[n,z2]=(dataframe.loc[n,'Descripcion_filtro'].count(z1))/res 
 
 # Saving results
 dataframe.to_csv('wordsasregressors.csv') 
